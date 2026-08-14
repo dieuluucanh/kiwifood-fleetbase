@@ -13,22 +13,25 @@ use Illuminate\Support\Str;
 /**
  * Materialize the `driver_activity_daily` report table.
  *
- * For each target day and each driver that has GPS pings (or an online/offline
- * transition) that day, computes:
+ *  For each target day and each driver that has GPS pings (or an online/offline
+ *  transition) that day, computes:
  *   - distance_km          : sum of haversine distance between consecutive pings
  *   - moving_duration_*    : time between pings classified as moving (speed > 5 km/h
  *                            or segment > 50 m), each segment capped at 5 minutes
  *   - online_duration_*    : online time within the day from `driver_status_log`
  *   - fleet (single)       : most-recently-assigned fleet (one fleet per driver-day)
  *
- * Re-running a date is idempotent (rows are keyed by company+driver+date).
+ *  Driver pings may be stored under either morph (`Fleetbase\Models\Driver` or
+ *  `Fleetbase\FleetOps\Models\Driver`); both are matched by default. Re-running
+ *  a date is idempotent (rows are keyed by company+driver+date).
  *
- * Usage:
+ *  Usage:
  *   php artisan driver-activity:aggregate                 # yesterday
  *   php artisan driver-activity:aggregate --date=today
  *   php artisan driver-activity:aggregate --date=2026-08-10
  *   php artisan driver-activity:aggregate --from=2026-08-01 --to=2026-08-12
  *   php artisan driver-activity:aggregate --driver=<uuid> --from=... --to=...
+ *   php artisan driver-activity:aggregate --morph="Fleetbase\Models\Driver,Fleetbase\FleetOps\Models\Driver"
  */
 class AggregateDriverActivity extends Command
 {
@@ -37,12 +40,21 @@ class AggregateDriverActivity extends Command
         {--from= : Start date for a range (YYYY-MM-DD)}
         {--to= : End date for a range (inclusive, YYYY-MM-DD)}
         {--driver= : Restrict to a single driver uuid}
-        {--morph= : Override the positions subject_type morph string}';
+        {--morph= : Override the positions subject_type morph string(s), comma-separated}';
 
     protected $description = 'Aggregate per-driver daily activity (distance, movement, online duration, fleet) into driver_activity_daily.';
 
-    /** positions.subject_type for driver points (Fleetbase Driver morph class). */
-    private const DEFAULT_DRIVER_MORPH = 'Fleetbase\\FleetOps\\Models\\Driver';
+    /**
+     * positions.subject_type morph strings that represent driver points.
+     *
+     * Fleetbase writes positions with the base morph (`Fleetbase\Models\Driver`)
+     * while the FleetOps Driver model uses its own morph — a single deployment
+     * can have pings under both, so we match them all by default.
+     */
+    private const DRIVER_MORPHS = [
+        'Fleetbase\\Models\\Driver',
+        'Fleetbase\\FleetOps\\Models\\Driver',
+    ];
 
     /** A segment with a time gap larger than this is treated as a device/idle break (no distance). */
     private const SEGMENT_GAP_BREAK_SECONDS = 3600;
@@ -65,7 +77,7 @@ class AggregateDriverActivity extends Command
         }
 
         $dates    = $this->resolveDates();
-        $morph    = $this->option('morph') ?: self::DEFAULT_DRIVER_MORPH;
+        $morphs   = $this->resolveMorphs();
         $driver   = $this->option('driver');
 
         if ($dates->isEmpty()) {
@@ -74,14 +86,14 @@ class AggregateDriverActivity extends Command
             return self::FAILURE;
         }
 
-        $this->info(sprintf('Aggregating driver activity for %d day(s) using morph [%s].', $dates->count(), $morph));
+        $this->info(sprintf('Aggregating driver activity for %d day(s) using morph(s) [%s].', $dates->count(), implode(', ', $morphs)));
 
         $totalRows = 0;
         $errors = 0;
 
         foreach ($dates as $date) {
             try {
-                $rows = $this->aggregateDate($date, $morph, $driver);
+                $rows = $this->aggregateDate($date, $morphs, $driver);
                 $totalRows += $rows;
                 $this->info(sprintf('  %s : %d driver-day row(s) written', $date->toDateString(), $rows));
             } catch (\Throwable $e) {
@@ -153,16 +165,33 @@ class AggregateDriverActivity extends Command
     }
 
     /**
+     * Resolve the list of positions.subject_type morph strings to aggregate.
+     */
+    private function resolveMorphs(): array
+    {
+        $option = $this->option('morph');
+        if (!$option) {
+            return self::DRIVER_MORPHS;
+        }
+
+        return collect(explode(',', $option))
+            ->map(fn ($m) => trim($m))
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    /**
      * Aggregate a single date. Returns the number of driver-day rows written.
      */
-    private function aggregateDate(Carbon $date, string $morph, ?string $driverFilter): int
+    private function aggregateDate(Carbon $date, array $morphs, ?string $driverFilter): int
     {
         $dayStart = $date->copy()->startOfDay();
         $dayEnd   = $date->copy()->endOfDay();
         $dayNext  = $date->copy()->addDay()->startOfDay();
         $isToday  = $date->isToday();
 
-        $drivers = $this->collectDriversForDay($dayStart, $dayNext, $morph, $driverFilter);
+        $drivers = $this->collectDriversForDay($dayStart, $dayNext, $morphs, $driverFilter);
 
         if ($drivers->isEmpty()) {
             return 0;
@@ -178,7 +207,7 @@ class AggregateDriverActivity extends Command
                     $dayStart,
                     $dayEnd,
                     $isToday,
-                    $morph
+                    $morphs
                 );
             } catch (\Throwable $e) {
                 $this->error(sprintf('    driver %s on %s : %s', $d->driver_uuid, $date->toDateString(), $e->getMessage()));
@@ -192,11 +221,11 @@ class AggregateDriverActivity extends Command
      * Distinct (company_uuid, driver_uuid) pairs that have positions or status
      * transitions within the day. Optionally filtered to a single driver.
      */
-    private function collectDriversForDay(Carbon $dayStart, Carbon $dayNext, string $morph, ?string $driverFilter)
+    private function collectDriversForDay(Carbon $dayStart, Carbon $dayNext, array $morphs, ?string $driverFilter)
     {
         $fromPositions = DB::table('positions')
             ->selectRaw('DISTINCT subject_uuid AS driver_uuid, company_uuid')
-            ->where('subject_type', $morph)
+            ->whereIn('subject_type', $morphs)
             ->where('created_at', '>=', $dayStart)
             ->where('created_at', '<', $dayNext)
             ->whereNull('deleted_at')
@@ -226,14 +255,14 @@ class AggregateDriverActivity extends Command
         Carbon $dayStart,
         Carbon $dayEnd,
         bool $isToday,
-        string $morph
+        array $morphs
     ): int {
         // --- pings ---
         $pings = DB::table('positions')
             ->selectRaw('ST_X(coordinates) AS lng, ST_Y(coordinates) AS lat, speed, created_at')
             ->where('subject_uuid', $driverUuid)
             ->where('company_uuid', $companyUuid)
-            ->where('subject_type', $morph)
+            ->whereIn('subject_type', $morphs)
             ->where('created_at', '>=', $dayStart)
             ->where('created_at', '<', $dayEnd->copy()->addSecond()) // inclusive of last second of day
             ->whereNull('deleted_at')
