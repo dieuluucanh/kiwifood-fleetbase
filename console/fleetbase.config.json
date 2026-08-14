@@ -1,7 +1,0 @@
-{
-    "API_HOST": "https://api.169.58.114.132.sslip.io",
-    "SOCKETCLUSTER_HOST": "api.169.58.114.132.sslip.io",
-    "SOCKETCLUSTER_PORT": 443,
-    "SOCKETCLUSTER_SECURE": true
-
-}

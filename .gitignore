@@ -2,6 +2,7 @@
 .fleetbase-dev-links.json
 .env
 .env.backup
+console/fleetbase.config.json
 .phpunit.result.cache
 .pnpm-store
 .tool-versions

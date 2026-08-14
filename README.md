@@ -177,6 +177,36 @@ services:
 
 You can learn more about local installation and configuration in the [official documentation](https://www.fleetbase.io/docs/platform/quickstart/running-locally).
 
+**Console Runtime Config:** The console fetches `console/fleetbase.config.json` at runtime on every app boot (served with `Cache-Control: no-cache`) and applies it on top of the build-time config. This file is **gitignored** — you create it once per machine and `git pull` never touches it again. A documented copy of the localhost variant is committed at `console/fleetbase.config.json.example`.
+
+Only these keys are read (see `console/app/utils/runtime-config.js`): `API_HOST`, `API_NAMESPACE`, `SOCKETCLUSTER_PATH`, `SOCKETCLUSTER_HOST`, `SOCKETCLUSTER_SECURE`, `SOCKETCLUSTER_PORT`, `OSRM_HOST`, `EXTENSIONS`.
+
+Localhost development (`console/fleetbase.config.json`):
+```json
+{
+    "API_HOST": "http://localhost:8000",
+    "SOCKETCLUSTER_HOST": "localhost",
+    "SOCKETCLUSTER_PORT": 38000,
+    "SOCKETCLUSTER_SECURE": false
+}
+```
+
+VPS production (169.58.114.132 behind sslip.io + TLS):
+```json
+{
+    "API_HOST": "https://api.169.58.114.132.sslip.io",
+    "SOCKETCLUSTER_HOST": "api.169.58.114.132.sslip.io",
+    "SOCKETCLUSTER_PORT": 443,
+    "SOCKETCLUSTER_SECURE": true
+}
+```
+
+> **Note:** If the console container was started while `console/fleetbase.config.json` was missing, Docker mounts an empty *directory* in its place and the console falls back to `{}` (broken). In that case create the file first, then recreate the container:
+> ```bash
+> docker compose up -d --force-recreate console
+> ```
+> When migrating the VPS: `git pull` deletes the previously tracked config file exactly once — recreate it with the VPS variant above and run the `--force-recreate` command once. Afterwards no restart is needed when editing the file (bind mount), though returning browsers may keep the old config cached for up to 1 hour.
+
 ## ⌨️ Fleetbase CLI 
 
 The Fleetbase CLI is a powerful tool for managing your Fleetbase instance. It simplifies installation, extension management, authentication, and development workflows.
