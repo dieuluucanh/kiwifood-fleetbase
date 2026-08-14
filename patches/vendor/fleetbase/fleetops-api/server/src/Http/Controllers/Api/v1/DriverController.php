@@ -443,8 +443,33 @@ class DriverController extends Controller
         // Determine the final boolean value for "online"
         $onlineValue = is_null($onlineParam) ? !$driver->online : Utils::castBoolean($onlineParam);
 
+        // Capture the prior value (before the update) so we only log an actual transition.
+        $previousOnline = (bool) $driver->online;
+
         // Perform a single update call
         $driver->updateQuietly(['online' => $onlineValue]);
+
+        // Log the online/offline transition for the Driver Activity report.
+        // updateQuietly() suppresses model events, so an observer cannot capture
+        // this; the status log is consumed by `driver-activity:aggregate` to compute
+        // per-day online duration. Never let logging break the toggle response.
+        try {
+            if (((int) $onlineValue) !== ((int) $previousOnline)) {
+                DB::table('driver_status_log')->insert([
+                    'uuid'         => Str::uuid()->toString(),
+                    '_key'         => Str::lower(Str::random(16)),
+                    'company_uuid' => $driver->company_uuid,
+                    'driver_uuid'  => $driver->uuid,
+                    'online'       => $onlineValue ? 1 : 0,
+                    'occurred_at'  => now(),
+                    'source'       => 'toggle',
+                    'created_at'   => now(),
+                    'updated_at'   => now(),
+                ]);
+            }
+        } catch (\Throwable $e) {
+            // intentionally swallowed — the toggle must still succeed
+        }
 
         // Update vehicle online too
         $driver->loadMissing('vehicle');

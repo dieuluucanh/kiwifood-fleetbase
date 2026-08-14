@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Support\Reporting\DriverActivityReportSchema;
+use Fleetbase\Support\Reporting\ReportSchemaRegistry;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
@@ -28,6 +30,20 @@ class AppServiceProvider extends ServiceProvider
     public function boot()
     {
         $this->configureOutboundHttpLogging();
+        $this->registerReportingSchemas();
+    }
+
+    /**
+     * Register app-defined Report Builder data sources with the Fleetbase
+     * ReportSchemaRegistry (a singleton bound by core-api). Registered after
+     * the registry resolves so the table appears in
+     * `GET int/v1/reports/tables?extension=fleet-ops`.
+     */
+    protected function registerReportingSchemas(): void
+    {
+        $this->callAfterResolving(ReportSchemaRegistry::class, function (ReportSchemaRegistry $registry): void {
+            (new DriverActivityReportSchema())->registerReportSchema($registry);
+        });
     }
 
     protected function configureOutboundHttpLogging(): void

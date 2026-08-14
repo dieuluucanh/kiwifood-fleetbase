@@ -15,7 +15,11 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        // $schedule->command('inspire')->hourly();
+        // Refresh the Driver Activity report table:
+        //  - nightly rollup of the previous (completed) day
+        //  - hourly in-progress refresh of today so far
+        $schedule->command('driver-activity:aggregate')->dailyAt('01:30')->withoutOverlapping();
+        $schedule->command('driver-activity:aggregate --date=today')->hourlyAt(15)->withoutOverlapping();
     }
 
     /**
