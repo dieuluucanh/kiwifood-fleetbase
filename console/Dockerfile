@@ -1,8 +1,12 @@
 # ---- Build Stage ----
 FROM node:22.22.0-alpine3.22 AS builder
 
-# Set the working directory in the container to /console
-WORKDIR /console
+# Set the working directory in the container to /fleetbase/console
+# (must be at least 2 levels deep: pnpm's recursive() drops all importers
+# when the workspace root sits directly under "/" and packages live at
+# "../packages" - the computed repository root becomes "/" and isSubdir
+# never matches, so install silently no-ops)
+WORKDIR /fleetbase/console
 
 # Create the pnpm directory and set the PNPM_HOME environment variable
 RUN mkdir -p ~/.pnpm
@@ -18,11 +22,14 @@ ENV DISABLE_FLEETBASE_ATTRIBUTION=$DISABLE_FLEETBASE_ATTRIBUTION
 # Add the pnpm global bin to the PATH
 ENV PATH=/root/.pnpm/bin:$PATH
 
+# Copy the shared workspace packages so ../packages/* in pnpm-workspace.yaml resolves
+COPY packages/ /fleetbase/packages/
+
 # Copy package metadata first for better dependency caching
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY console/package.json console/pnpm-lock.yaml console/pnpm-workspace.yaml ./
 
 # Copy over .npmrc if applicable
-COPY .npmr[c] ./
+COPY console/.npmr[c] ./
 
 # Install global dependencies
 RUN npm install -g ember-cli pnpm 
@@ -37,7 +44,7 @@ RUN mkdir -p -m 0600 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
 RUN pnpm install --frozen-lockfile
 
 # Copy the console directory contents into the container at /console
-COPY . .
+COPY console/ .
 
 # Build the application
 RUN pnpm build --environment $ENVIRONMENT
@@ -46,13 +53,13 @@ RUN pnpm build --environment $ENVIRONMENT
 FROM nginx:alpine
 
 # Copy the built app to our served directory
-COPY --from=builder /console/dist /usr/share/nginx/html
+COPY --from=builder /fleetbase/console/dist /usr/share/nginx/html
 
 # Expose the port nginx is bound to
 EXPOSE 4200
 
 # Use custom nginx.conf
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY console/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Start Nginx server
 CMD ["nginx", "-g", "daemon off;"]
