@@ -88,6 +88,7 @@ services:
   application:
     restart: unless-stopped
     image: fleetbase/fleetbase-api:latest
+    command: ["sh", "-c", "php artisan storage:link; exec php artisan octane:frankenphp --max-requests=1000 --port=8000 --host=0.0.0.0"]
     volumes:
       - ./api/.env:/fleetbase/api/.env
       - ./api/storage/app:/fleetbase/api/storage/app
