@@ -1,3 +1,8 @@
+packages:
+  - "../packages/ember-core"
+  - "../packages/ember-ui"
+  - "../packages/fleetops"
+  - "../packages/fleetops-data"
 linkWorkspacePackages: deep
 preferWorkspacePackages: true
 publicHoistPattern:
@@ -5,9 +10,9 @@ publicHoistPattern:
   - "*ember-ui*"
   - "*fleetops-data*"
 overrides:
-  "@fleetbase/fleetops-data": "^0.1.40"
-  "@fleetbase/ember-core": "^0.3.24"
-  "@fleetbase/ember-ui": "^0.3.41"
+  "@fleetbase/fleetops-data": "workspace:*"
+  "@fleetbase/ember-core": "workspace:*"
+  "@fleetbase/ember-ui": "workspace:*"
 allowBuilds:
   "@fortawesome/fontawesome-common-types": false
   "@fortawesome/fontawesome-svg-core": false

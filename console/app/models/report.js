@@ -399,7 +399,7 @@ export default class ReportModel extends Model {
         const fetch = owner.lookup('service:fetch');
 
         try {
-            const response = await fetch('reports/export-query', {
+            const response = await fetch.post('reports/export-query', {
                 query_config: queryConfig,
                 format,
                 options,
