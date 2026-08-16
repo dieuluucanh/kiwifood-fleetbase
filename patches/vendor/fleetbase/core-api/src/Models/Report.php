@@ -203,6 +203,7 @@ class Report extends Model
             return [
                 'success' => true,
                 'results' => $result['data'],
+                'data'    => $result['data'],
                 'columns' => $result['columns'],
                 'meta'    => [
                     'execution_time'   => $executionTime,
