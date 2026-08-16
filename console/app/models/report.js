@@ -49,7 +49,7 @@ export default class ReportModel extends Model {
     fillResult(result = {}) {
         this.setProperties({
             result_columns: result?.columns ?? [],
-            data: result?.data ?? [],
+            data: result?.data ?? result?.results ?? [],
             meta: result?.meta ?? {},
             row_count: result?.meta?.total_rows ?? 0,
             execution_time: result?.meta?.execution_time_ms ?? -1,
