@@ -46,6 +46,8 @@ RUN pnpm install --frozen-lockfile
 # Copy the console directory contents into the container at /console
 COPY console/ .
 
+ENV DISABLE_RUNTIME_CONFIG=false
+
 # Build the application
 RUN pnpm build --environment $ENVIRONMENT
 
