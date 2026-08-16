@@ -13,7 +13,7 @@
 	branch = main
 [submodule "packages/ember-core"]
 	path = packages/ember-core
-	url = git@github.com:fleetbase/ember-core.git
+	url = git@github.com:dieuluucanh/fleetbase-ember-core.git
 	branch = main
 [submodule "packages/ember-ui"]
 	path = packages/ember-ui
