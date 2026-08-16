@@ -127,6 +127,44 @@ class ReportQueryConverter
     }
 
     /**
+     * Export the query results in the requested format.
+     */
+    public function export(string $format, array $options = []): array
+    {
+        $result = $this->execute();
+
+        if (!($result['success'] ?? false)) {
+            return $result;
+        }
+
+        $columns = array_map(
+            fn (array $column) => array_merge(['key' => $column['name']], $column),
+            $result['columns'] ?? []
+        );
+
+        return (new ReportQueryExporter(
+            $result['data'] ?? [],
+            $columns,
+            $result['meta'] ?? [],
+            $this->queryConfig['table']['name'] ?? 'report'
+        ))->export($format, $options);
+    }
+
+    /**
+     * Get supported export formats for report results.
+     */
+    public function getAvailableExportFormats(): array
+    {
+        $formats = ReportQueryExporter::getSupportedFormats();
+
+        if (isset($formats['excel'])) {
+            $formats['xlsx'] = $formats['excel'];
+        }
+
+        return $formats;
+    }
+
+    /**
      * Build the complete query.
      */
     protected function buildQuery(): Builder

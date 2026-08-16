@@ -524,14 +524,18 @@ class Report extends Model
      */
     protected function logExport(string $format, int $rowCount): void
     {
-        $this->auditLogs()->create([
-            'action'  => 'export',
-            'details' => [
-                'format'      => $format,
-                'row_count'   => $rowCount,
-                'exported_at' => now()->toISOString(),
-            ],
-        ]);
+        try {
+            $this->auditLogs()->create([
+                'action'   => 'export',
+                'metadata' => [
+                    'format'      => $format,
+                    'row_count'   => $rowCount,
+                    'exported_at' => now()->toISOString(),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            // Audit logging must never fail an otherwise successful export.
+        }
     }
 
     /**
