@@ -1,6 +1,7 @@
 [submodule "packages/fleetops"]
 	path = packages/fleetops
 	url = git@github.com:dieuluucanh/fleetbase-fleetops.git
+	branch = main
 [submodule "packages/storefront"]
 	path = packages/storefront
 	url = git@github.com:fleetbase/storefront.git
