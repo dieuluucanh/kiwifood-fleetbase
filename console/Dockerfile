@@ -32,7 +32,7 @@ COPY console/package.json console/pnpm-lock.yaml console/pnpm-workspace.yaml ./
 COPY console/.npmr[c] ./
 
 # Install global dependencies
-RUN npm install -g ember-cli pnpm 
+RUN npm install -g ember-cli pnpm@11.9.0 
 
 # Install git
 RUN apk update && apk add git openssh-client
