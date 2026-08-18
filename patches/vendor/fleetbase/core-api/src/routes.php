@@ -13,9 +13,11 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
+// @codeCoverageIgnoreStart
 if (env('APP_DEBUG') === true) {
     Route::get('test', 'Fleetbase\Http\Controllers\Controller@test');
 }
+// @codeCoverageIgnoreEnd
 
 Route::prefix(config('fleetbase.api.routing.prefix', '/'))->namespace('Fleetbase\Http\Controllers')->group(
     function ($router) {
@@ -333,6 +335,7 @@ Route::prefix(config('fleetbase.api.routing.prefix', '/'))->namespace('Fleetbase
                                     $router->get('tables/{table}/relationships', $controller('getTableRelationships'));
                                     $router->post('validate-query', $controller('validateQuery'));
                                     $router->post('validate-computed-column', $controller('validateComputedColumn'));
+                                    $router->post('refresh-data-source', $controller('refreshDataSource'));
                                     $router->post('execute-query', $controller('executeQuery'));
                                     $router->post('analyze-query', $controller('analyzeQuery'));
                                     $router->post('export-query', $controller('exportQuery'));

@@ -40,6 +40,7 @@ class DriverActivityReportSchema implements ReportSchema
                 ->excludeColumns(['id', '_key', 'uuid', 'company_uuid', 'driver_uuid', 'fleet_uuid', 'meta', 'deleted_at'])
                 ->maxRows(50000)
                 ->cacheTtl(3600)
+                ->refreshable('driver-activity:aggregate', 'Refresh')
                 ->columns([
                     // Named "driver_publicid" (not "driver_public_id") because the
                     // Report Builder's Table builder auto-hides columns ending in
