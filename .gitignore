@@ -58,3 +58,5 @@ builds/osx/frankenphp
 *.dll
 *.so
 *.dylib
+# Windows reserved device names
+nul
