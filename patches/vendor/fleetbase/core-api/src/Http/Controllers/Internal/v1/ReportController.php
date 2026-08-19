@@ -355,7 +355,7 @@ class ReportController extends FleetbaseController
                     500
                 );
             }
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return response()->json(
                 $this->errorHandler->handleExportError($e, $request->input('format', 'unknown'), [
                     'action'    => 'export_report',

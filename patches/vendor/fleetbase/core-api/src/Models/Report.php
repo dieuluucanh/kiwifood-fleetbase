@@ -249,7 +249,7 @@ class Report extends Model
             $this->logExport($format, $result['rows'] ?? 0);
 
             return $result;
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return [
                 'success' => false,
                 'error'   => $e->getMessage(),
