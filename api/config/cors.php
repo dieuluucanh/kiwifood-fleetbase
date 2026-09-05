@@ -29,7 +29,7 @@ return [
 
     'exposed_headers' => ['x-compressed-json', 'access-console-sandbox', 'access-console-sandbox-key', 'content-disposition'],
 
-    'max_age' => 0,
+    'max_age' => 86400,
 
     'supports_credentials' => true,
 
